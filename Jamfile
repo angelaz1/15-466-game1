@@ -129,4 +129,21 @@ LOCATE_TARGET = objs ; #put objects in 'objs' directory
 Objects $(GAME_NAMES:S=.cpp) ;
 
 LOCATE_TARGET = dist ; #put main in 'dist' directory
-MainFromObjects game : $(GAME_NAMES:S=$(SUFOBJ)) ;
+MainFromObjects KaraSoko : $(GAME_NAMES:S=$(SUFOBJ)) ;
+
+# Building an assets pipeline
+# Referenced https://www.boost.org/doc/libs/1_31_0/tools/build/jam_src/Jamfile.html for documentation
+# And above code for building a game
+
+# Store names of all .cpp files to build into a variable:
+ASSET_NAMES = 
+	asset_processing 
+	load_save_png 
+	data_path
+	;
+
+LOCATE_TARGET = objs ;
+Objects $(ASSET_NAMES:S=.cpp) ;
+
+LOCATE_TARGET = assets ;
+MainFromObjects LoadAssets : $(ASSET_NAMES:S=$(SUFOBJ)) ; 
