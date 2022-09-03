@@ -6,6 +6,9 @@
 //for glm::value_ptr() :
 #include <glm/gtc/type_ptr.hpp>
 
+//for loading png:
+#include "data_path.hpp"
+
 #include <random>
 
 PlayMode::PlayMode() {
@@ -71,12 +74,12 @@ PlayMode::PlayMode() {
 	};
 
 	//makes the outside of tiles 0-16 solid:
-	ppu.palette_table[0] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
+	// ppu.palette_table[0] = {
+	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+	// };
 
 	//makes the center of tiles 0-16 solid:
 	ppu.palette_table[1] = {
@@ -101,6 +104,15 @@ PlayMode::PlayMode() {
 		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
 		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
 	};
+
+	//  TODO: Load assets
+	player_sprite = LoadedSprite(&ppu, data_path("assets/player.png"));
+	box_sprite = LoadedSprite(&ppu, data_path("assets/box.png"));
+	// for (uint8_t i = 0; i < xx; i++) {
+	// 	background_tiles[i] = new LoadedSprite(data_path("background"+i));
+	// }
+	// TODO: Loading in lights, floor buttons, etc.
+
 
 	// Create background
 	for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
@@ -201,7 +213,7 @@ void PlayMode::push_box() {
 	uint8_t new_row = box_row + box_travel_dir.y;
 	while (is_valid_pos(new_row, new_col)) {
 		// Check if there's obstacles
-		if (game_map[new_row][new_col] != 0) {
+		if (game_map[get_index(new_row, new_col)] != 0) {
 			break;
 		}
 		box_row = new_row;
@@ -244,7 +256,7 @@ void PlayMode::pull_box() {
 	uint8_t new_row = box_row + box_travel_dir.y;
 	while (is_valid_pos(new_row, new_col)) {
 		// Check if there's obstacles
-		if (game_map[new_row][new_col] != 0) {
+		if (game_map[get_index(new_row, new_col)] != 0) {
 			break;
 		}
 
@@ -282,6 +294,10 @@ void PlayMode::move_player(uint8_t new_row, uint8_t new_col) {
 
 glm::u8vec2 PlayMode::get_pos_vec(uint8_t row, uint8_t col) {
 	return glm::u8vec2(col * tile_size, row * tile_size);
+}
+
+uint PlayMode::get_index(uint8_t row, uint8_t col) {
+	return row * grid_width + col;
 }
 
 void PlayMode::update(float elapsed) {
@@ -341,30 +357,13 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		0xff
 	);
 
-	// //tilemap gets recomputed every frame as some weird plasma thing:
-	// //NOTE: don't do this in your game! actually make a map or something :-)
-	// for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-	// 	for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-	// 		//TODO: make weird plasma thing
-	// 		ppu.background[x+PPU466::BackgroundWidth*y] = ((x+y)%16);
-	// 	}
-	// }
-
 	// //background scroll:
 	// ppu.background_position.x = int32_t(-0.5f * player_at.x);
 	// ppu.background_position.y = int32_t(-0.5f * player_at.y);
 
-	//player sprite:
-	ppu.sprites[0].x = player_pos.x;
-	ppu.sprites[0].y = player_pos.y;
-	ppu.sprites[0].index = 32;
-	ppu.sprites[0].attributes = 7;
-
-	//box sprite:
-	ppu.sprites[1].x = box_pos.x;
-	ppu.sprites[1].y = box_pos.y;
-	ppu.sprites[1].index = 32;
-	ppu.sprites[1].attributes = 6;
+	uint8_t sprite_index = 0;
+	player_sprite.draw(&ppu, &sprite_index, player_pos);
+	box_sprite.draw(&ppu, &sprite_index, box_pos);
 
 	// //some other misc sprites:
 	// for (uint32_t i = 1; i < 63; ++i) {
