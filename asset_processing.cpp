@@ -16,9 +16,10 @@
 #define MAX_PALETTES_PER_TABLE 8
 #define MAX_TILES_PER_TABLE 16*16
 
-void read_png(std::string file_path, std::vector< PPU466::Palette > *palette_table, uint32_t *palette_index,
-              std::vector< PPU466::Tile > *tile_table, uint32_t *tile_index,
-              std::vector< PlayMode::LoadedSprite > *sprite_table, uint32_t *sprite_index) {
+void read_png(std::string file_path, 
+              std::vector<PPU466::Palette> *palette_table, uint32_t *palette_index, std::vector<uint8_t> *palette_color_count,
+              std::vector<PPU466::Tile> *tile_table, uint32_t *tile_index,
+              std::vector<PlayMode::LoadedSprite> *sprite_table, uint32_t *sprite_index) {
     
     glm::uvec2 file_size = glm::uvec2();
     std::vector< glm::u8vec4 > data = std::vector< glm::u8vec4 >();
@@ -28,8 +29,10 @@ void read_png(std::string file_path, std::vector< PPU466::Palette > *palette_tab
     uint8_t color_count = 0;
     PPU466::Palette palette = PPU466::Palette();
 
+    uint8_t new_palette_index = *palette_index;
+
     for (auto pixel : data) {
-        if (std::find(palette.begin(), palette.end(), pixel) == palette.end()) {
+        if (std::find(palette.begin(), palette.begin() + color_count, pixel) == palette.begin() + color_count) {
             palette[color_count] = glm::u8vec4(pixel[0], pixel[1], pixel[2], pixel[3]);
             color_count++;
         }
@@ -38,9 +41,30 @@ void read_png(std::string file_path, std::vector< PPU466::Palette > *palette_tab
         }
     }
 
-    if (*palette_index >= MAX_PALETTES_PER_TABLE) {
+    // Try and combine with previous to save palette space
+    auto is_combinable = [color_count](uint8_t i){ return color_count + i <= MAX_COLOR_PER_PALETTE; };
+    auto find_itr = std::find_if((*palette_color_count).begin(), (*palette_color_count).end(), is_combinable);
+    if (find_itr != (*palette_color_count).end()) {
+        new_palette_index = std::distance((*palette_color_count).begin(), find_itr);
+
+        // Combine colors
+        uint8_t existing_color_count = (*palette_color_count)[new_palette_index];
+        for (uint8_t i = 0; i < color_count; i++) {
+            (*palette_table)[new_palette_index][existing_color_count + i] = palette[i];
+        }
+        palette = (*palette_table)[new_palette_index];
+
+        // Update color count
+        (*palette_color_count)[new_palette_index] += color_count;
+    } else {
+        palette_color_count->push_back(color_count);
+    }
+
+    if (new_palette_index >= MAX_PALETTES_PER_TABLE) {
         throw std::runtime_error("Too many palettes in table!");
     }
+
+    
 
     PlayMode::LoadedSprite loaded_sprite = PlayMode::LoadedSprite();
 
@@ -91,7 +115,7 @@ void read_png(std::string file_path, std::vector< PPU466::Palette > *palette_tab
             sprite.x = c;
             sprite.y = r;
             sprite.index = *tile_index;
-            sprite.attributes = *palette_index;
+            sprite.attributes = new_palette_index;
 
             if (loaded_sprite_index > MAX_SPRITES_IN_LOADEDSPRITE) {
                 throw std::runtime_error("This sprite is too large!");
@@ -107,8 +131,10 @@ void read_png(std::string file_path, std::vector< PPU466::Palette > *palette_tab
     (*sprite_table).push_back(loaded_sprite);
     (*sprite_index)++;
 
-    (*palette_table).push_back(palette);
-    (*palette_index)++;
+    if (new_palette_index == *palette_index) {
+        (*palette_table).push_back(palette);
+        (*palette_index)++;
+    }
 
     std::cout << "PNG Asset " << loaded_sprite.name << " saved\n";
 }
@@ -119,6 +145,7 @@ int main(int argc, char **argv) {
 	//when compiled on windows, unhandled exceptions don't have their message printed, which can make debugging simple issues difficult.
 	try {
 #endif
+    std::vector< uint8_t > palette_color_count = std::vector< uint8_t >();
     std::vector< PPU466::Palette > palette_table = std::vector< PPU466::Palette >();
     std::vector< PPU466::Tile > tile_table = std::vector< PPU466::Tile >();
     std::vector< PlayMode::LoadedSprite > sprite_table = std::vector< PlayMode::LoadedSprite >();
@@ -131,7 +158,7 @@ int main(int argc, char **argv) {
     for (auto const& dir_entry : std::__fs::filesystem::directory_iterator{ data_path("") }) {
         if (dir_entry.path().extension() == ".png") {
             read_png(dir_entry.path(), 
-                     &palette_table, &palette_index, 
+                     &palette_table, &palette_index, &palette_color_count,
                      &tile_table, &tile_index, 
                      &sprite_table, &sprite_index);
         }

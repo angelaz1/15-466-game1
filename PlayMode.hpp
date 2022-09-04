@@ -58,12 +58,16 @@ private:
 	const static uint8_t grid_start_y = 1;
 
 	const static uint8_t grid_width = 14;
-	const static uint8_t grid_height = 10;
+	const static uint8_t grid_height = 11;
 
 	const static uint8_t grid_tile_size = 16;
 
-	// 0 - empty
-	std::array<uint8_t, grid_height*grid_width> game_map;
+	enum GridContents {
+		CellEmpty = 0,
+		RedButton = 1, BlueButton = 2, YellowButton = 3, GreenButton = 4
+	};
+
+	std::array<GridContents, grid_height*grid_width> game_map;
 
 	// Player position:
 	uint8_t player_row = 0;
@@ -82,9 +86,48 @@ private:
 	glm::u8vec2 box_travel_dir = glm::u8vec2();
 	uint8_t box_target_dist = 0;
 	const uint8_t box_travel_speed = 160;
+	int box_last_hit_index = -1;
 
 	// Memory game aspects
-	// game state should loop between showing lights & reading input
+	// Managing the lights that are displayed
+	enum LightColor {
+		LightOff = -1, LightRed = 0, LightBlue = 1, LightYellow = 2, LightGreen = 3, AllLightsGreen = 4, AllLightsRed = 5
+	};
+
+	// Stores the names of the light sprites in order of red, blue, yellow, green
+	std::vector<std::string> lightSpriteOrder;
+
+	// Number of different lights
+	const static uint8_t num_lights = 4;
+	LightColor current_light = LightOff;
+
+	// Parts of the memory game
+	uint8_t light_sequence_count = 0;
+	uint8_t max_light_sequence_count = 10;
+
+	std::vector<LightColor> lights_order;
+	std::vector<LightColor> player_lights;
+	uint8_t player_light_count = 0;
+	uint8_t prev_player_light_count = 0;
+
+	// Variables that have to do with displaying the lights
+	enum LightState {
+		LightShowSequence, LightShowBreak, LightShowFeedback
+	};
+
+	bool showing_lights = false;
+	uint8_t showing_lights_index = 0;
+	float showing_light_time = 0;
+	LightState light_state;
+	const float light_show_time = 1.2f;
+	const float light_break_time = 0.5f;
+
+	bool failed_sequence = false;
+
+	enum GameState {
+		MemorizeSequence, RepeatSequence
+	};
+	GameState gameState;
 
 	// If possible, moves the player to the new row/col
 	void move_player(uint8_t new_row, uint8_t new_col);
@@ -104,6 +147,15 @@ private:
 
 	// Given row/col, gets the index in the grid
 	uint get_index(uint8_t row, uint8_t col);
+
+	// Read player input
+	void read_player_input();
+
+	// Lights-related functions
+	void generate_light_sequence();
+	void show_lights(float elapsed);
+
+	LightColor get_light_from_button(GridContents cell);
 
 	// A dictionary containing mappings from sprite name -> loaded sprite
 	std::unordered_map<std::string, LoadedSprite> sprite_mapping;

@@ -2,7 +2,7 @@
 
 **Author:** Angela Zhang
 
-**Design:** (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+**Design:** KaraSoko is a puzzle game based on the box-pushing game (Sokoban) with memory game elements. Along with having to push the box around, player must also memorize a sequence of colors and manipulate the box to pass over corresponding colored buttons in the given order.
 
 ## Screen Shot
 

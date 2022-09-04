@@ -195,16 +195,39 @@ PlayMode::PlayMode() {
 		}
 	}
 
+	// Store light sprites
+	lightSpriteOrder = std::vector<std::string>();
+	lightSpriteOrder.push_back("red_light");
+	lightSpriteOrder.push_back("blue_light");
+	lightSpriteOrder.push_back("yellow_light");
+	lightSpriteOrder.push_back("green_light");
+
 	// Initialize grid_map
-	game_map = std::array<uint8_t, grid_height*grid_width>();
+	game_map = std::array<GridContents, grid_height*grid_width>();
 
 	// Initialize player position
 	player_pos = get_pos_vec(player_row, player_col);
 
+	// Initialize buttons
+	for (uint8_t i = 0; i < num_lights; i++) {
+		uint8_t button_row, button_col;
+		do {
+			button_row = (rand() % grid_height - 1) + 1;
+			button_col = (rand() % grid_width - 1) + 1;
+		} while (game_map[get_index(button_row, button_col)] != CellEmpty);
+
+		game_map[get_index(button_row, button_col)] = GridContents(i + 1);
+	}
+	
 	// Initialize box position
-	box_row = (rand() % grid_height - 1) + 1;
-	box_col = (rand() % grid_width - 1) + 1;
+	do {
+		box_row = (rand() % grid_height - 1) + 1;
+		box_col = (rand() % grid_width - 1) + 1;
+	} while (game_map[get_index(box_row, box_col)] != CellEmpty);
 	box_pos = get_pos_vec(box_row, box_col);
+
+	// Start game on memorizing
+	gameState = MemorizeSequence;
 }
 
 PlayMode::~PlayMode() {
@@ -290,10 +313,24 @@ void PlayMode::move_box(BoxAction boxAction) {
 	uint8_t new_col = box_col + box_travel_dir.x;
 	uint8_t new_row = box_row + box_travel_dir.y;
 	while (is_valid_pos(new_row, new_col)) {
-		// Check if there's obstacles
-		if (game_map[get_index(new_row, new_col)] != 0) {
-			break;
-		}
+		// Check if there's anything on the ground
+		// uint current_index = get_index(new_row, new_col);
+		// if (game_map[current_index] != CellEmpty && gameState == RepeatSequence) {
+		// 	// Count button press
+		// 	LightColor hit_light = get_light_from_button(game_map[current_index]);
+		// 	if (lights_order[player_light_count] != hit_light) {
+		// 		failed_sequence = true;
+		// 		gameState = MemorizeSequence;
+		// 	} else {
+		// 		player_lights.push_back(hit_light);
+		// 		player_light_count++;
+
+		// 		if (player_light_count == light_sequence_count) {
+		// 			failed_sequence = false;
+		// 			gameState = MemorizeSequence;
+		// 		}
+		// 	}
+		// }
 
 		if (new_row == player_row && new_col == player_col) {
 			break;
@@ -327,6 +364,17 @@ void PlayMode::move_player(uint8_t new_row, uint8_t new_col) {
 	player_pos = get_pos_vec(player_row, player_col);
 }
 
+PlayMode::LightColor PlayMode::get_light_from_button(GridContents cell) {
+	switch (cell) {
+		case RedButton: return LightRed;
+		case BlueButton: return LightBlue;
+		case YellowButton: return LightYellow;
+		case GreenButton: return LightGreen;
+		default: break;
+	}
+	return LightOff;
+}
+
 glm::u8vec2 PlayMode::get_pos_vec(uint8_t row, uint8_t col) {
 	return glm::u8vec2((grid_start_x + col) * grid_tile_size, (grid_start_y + row) * grid_tile_size);
 }
@@ -335,26 +383,15 @@ uint PlayMode::get_index(uint8_t row, uint8_t col) {
 	return row * grid_width + col;
 }
 
-void PlayMode::update(float elapsed) {
-	//slowly rotates through [0,1):
-	// (will be used to set background color)
-	background_fade += elapsed / 10.0f;
-	background_fade -= std::floor(background_fade);
-
+void PlayMode::read_player_input() {
 	if (!box_is_moving) {
 		if (left.downs) move_player(player_row, player_col - 1);
 		else if (right.downs) move_player(player_row, player_col + 1);
 		else if (down.downs) move_player(player_row - 1, player_col);
 		else if (up.downs) move_player(player_row + 1, player_col);
-		else if (r_key.downs) {
-			// FIXME: remove this, just for testing
-			box_row = (rand() % grid_height - 1) + 1;
-			box_col = (rand() % grid_width - 1) + 1;
-			box_pos = get_pos_vec(box_row, box_col);
-		}
 		else if (f_key.downs) {
-			// Pull box
 			if (box_row == player_row || box_col == player_col) {
+				// Pull box
 				move_box(PullBox);
 			}
 		}
@@ -367,6 +404,96 @@ void PlayMode::update(float elapsed) {
 	down.downs = 0;
 	r_key.downs = 0;
 	f_key.downs = 0;
+}
+
+void PlayMode::generate_light_sequence() {
+	player_lights = std::vector<LightColor>();
+	player_light_count = 0;
+
+	// Generate lights order
+	if (!failed_sequence) {
+		light_sequence_count = std::min(++light_sequence_count, max_light_sequence_count);
+		lights_order = std::vector<LightColor>();
+		for (uint8_t i = 0; i < light_sequence_count; i++) {
+			lights_order.push_back(LightColor((rand() % num_lights)));
+		}
+	}
+
+	showing_lights = true;
+	showing_lights_index = 0;
+	showing_light_time = 0;
+	light_state = LightShowFeedback;
+}
+
+void PlayMode::show_lights(float elapsed) {	
+	current_light = LightOff;
+
+	if (showing_lights_index >= light_sequence_count) {
+		showing_lights = false;
+		gameState = RepeatSequence;
+		return;
+	}
+
+	showing_light_time += elapsed;
+
+	switch (light_state) {
+		case LightShowSequence: {
+			current_light = lights_order[showing_lights_index];
+			if (showing_light_time >= light_show_time) {
+				showing_lights_index++;
+				showing_light_time = 0;
+				light_state = LightShowBreak;
+			}
+			break;
+		}
+		case LightShowBreak: {
+			if (showing_light_time >= light_break_time) {
+				showing_light_time = 0;
+				light_state = LightShowSequence;
+			}
+			break;
+		}
+		case LightShowFeedback: {
+			current_light = failed_sequence ? AllLightsRed : AllLightsGreen;
+
+			if (showing_light_time >= light_break_time) {
+				showing_light_time = 0;
+				light_state = LightShowBreak;
+			}
+			break;
+		}
+		default: break;
+	}
+}
+
+void PlayMode::update(float elapsed) {
+	//slowly rotates through [0,1):
+	// (will be used to set background color)
+	background_fade += elapsed / 10.0f;
+	background_fade -= std::floor(background_fade);
+
+	switch (gameState) {
+		case MemorizeSequence:
+			if (!showing_lights) {
+				generate_light_sequence();
+			}
+			show_lights(elapsed);
+			break;
+		case RepeatSequence:
+			read_player_input();
+
+			current_light = LightOff;
+			if (player_light_count > prev_player_light_count) {
+				current_light = player_lights[prev_player_light_count];
+				showing_light_time += elapsed;
+
+				if (showing_light_time >= light_break_time) {
+					showing_light_time = 0;
+					prev_player_light_count++;
+				}
+			}
+			break;
+	}
 
 	if (box_is_moving) {
 		box_travel_time += elapsed;
@@ -374,9 +501,33 @@ void PlayMode::update(float elapsed) {
 		if (travel_dist >= box_target_dist) {
 			box_pos = box_start + box_target_dist * box_travel_dir;
 			box_is_moving = false;
+			box_last_hit_index = -1;
 		}
 		else {
 			box_pos = box_start + travel_dist * box_travel_dir;
+		}
+
+		// Check for button press
+		uint8_t box_row = (box_pos.y - grid_start_y) / grid_tile_size;
+		uint8_t box_col = (box_pos.x - grid_start_x) / grid_tile_size;
+		uint current_index = get_index(box_row, box_col);
+		if (current_index != box_last_hit_index && game_map[current_index] != CellEmpty && gameState == RepeatSequence) {
+			// Count button press
+			LightColor hit_light = get_light_from_button(game_map[current_index]);
+			if (lights_order[player_light_count] != hit_light) {
+				failed_sequence = true;
+				gameState = MemorizeSequence;
+			} else {
+				player_lights.push_back(hit_light);
+				player_light_count++;
+
+				if (player_light_count == light_sequence_count) {
+					failed_sequence = false;
+					gameState = MemorizeSequence;
+				}
+			}
+
+			box_last_hit_index = current_index;
 		}
 	}
 }
@@ -392,23 +543,48 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		0xff
 	);
 
-	// //background scroll:
-	// ppu.background_position.x = int32_t(-0.5f * player_at.x);
-	// ppu.background_position.y = int32_t(-0.5f * player_at.y);
-
 	uint8_t sprite_index = 0;
+
+	// Draw buttons 
+	for (uint8_t r = 0; r < grid_height; r++) {
+		for (uint8_t c = 0; c < grid_width; c++) {
+			switch (game_map[get_index(r, c)]) {
+				case RedButton:
+					sprite_mapping["red_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					break;
+				case BlueButton:
+					sprite_mapping["blue_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					break;
+				case YellowButton:
+					sprite_mapping["yellow_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					break;
+				case GreenButton:
+					sprite_mapping["green_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					break;
+				default: break;
+			}
+		}
+	}
+
 	sprite_mapping["player"].draw(&ppu, &sprite_index, player_pos);
 	sprite_mapping["box"].draw(&ppu, &sprite_index, box_pos);
 
-	// //some other misc sprites:
-	// for (uint32_t i = 1; i < 63; ++i) {
-	// 	float amt = (i + 2.0f * background_fade) / 62.0f;
-	// 	ppu.sprites[i].x = int32_t(0.5f * PPU466::ScreenWidth + std::cos( 2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * PPU466::ScreenWidth);
-	// 	ppu.sprites[i].y = int32_t(0.5f * PPU466::ScreenHeight + std::sin( 2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * PPU466::ScreenWidth);
-	// 	ppu.sprites[i].index = 32;
-	// 	ppu.sprites[i].attributes = 6;
-	// 	if (i % 2) ppu.sprites[i].attributes |= 0x80; //'behind' bit
-	// }
+	// Draw lights
+	for (uint8_t i = 0; i < num_lights; i++) {
+		LoadedSprite light_sprite = sprite_mapping["off_light"];
+
+		if (current_light == AllLightsRed) {
+			light_sprite = sprite_mapping["red_light"];
+		}
+		else if (current_light == AllLightsGreen) {
+			light_sprite = sprite_mapping["green_light"];
+		} 
+		else if (current_light == i) {
+			light_sprite = sprite_mapping[lightSpriteOrder[i]];
+		}
+
+		light_sprite.draw(&ppu, &sprite_index, get_pos_vec(28, 2 + i * 3));
+	}
 
 	//--- actually draw ---
 	ppu.draw(drawable_size);
