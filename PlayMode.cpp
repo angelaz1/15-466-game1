@@ -17,99 +17,6 @@
 #define TILE_WIDTH 8
 
 PlayMode::PlayMode() {
-	//TODO:
-	// you *must* use an asset pipeline of some sort to generate tiles.
-	// don't hardcode them like this!
-	// or, at least, if you do hardcode them like this,
-	//  make yourself a script that spits out the code that you paste in here
-	//   and check that script into your repository.
-
-	//Also, *don't* use these tiles in your game:
-
-	// { //use tiles 0-16 as some weird dot pattern thing:
-	// 	std::array< uint8_t, 8*8 > distance;
-	// 	for (uint32_t y = 0; y < 8; ++y) {
-	// 		for (uint32_t x = 0; x < 8; ++x) {
-	// 			float d = glm::length(glm::vec2((x + 0.5f) - 4.0f, (y + 0.5f) - 4.0f));
-	// 			d /= glm::length(glm::vec2(4.0f, 4.0f));
-	// 			distance[x+8*y] = std::max(0,std::min(255,int32_t( 255.0f * d )));
-	// 		}
-	// 	}
-	// 	for (uint32_t index = 0; index < 16; ++index) {
-	// 		PPU466::Tile tile;
-	// 		uint8_t t = (255 * index) / 16;
-	// 		for (uint32_t y = 0; y < 8; ++y) {
-	// 			uint8_t bit0 = 0;
-	// 			uint8_t bit1 = 0;
-	// 			for (uint32_t x = 0; x < 8; ++x) {
-	// 				uint8_t d = distance[x+8*y];
-	// 				if (d > t) {
-	// 					bit0 |= (1 << x);
-	// 				} else {
-	// 					bit1 |= (1 << x);
-	// 				}
-	// 			}
-	// 			tile.bit0[y] = bit0;
-	// 			tile.bit1[y] = bit1;
-	// 		}
-	// 		ppu.tile_table[index] = tile;
-	// 	}
-	// }
-
-	// //use sprite 32 as a "player":
-	// ppu.tile_table[32].bit0 = {
-	// 	0b01111110,
-	// 	0b11111111,
-	// 	0b11111111,
-	// 	0b11111111,
-	// 	0b11111111,
-	// 	0b11111111,
-	// 	0b11111111,
-	// 	0b01111110,
-	// };
-	// ppu.tile_table[32].bit1 = {
-	// 	0b00000000,
-	// 	0b00000000,
-	// 	0b00011000,
-	// 	0b00100100,
-	// 	0b00000000,
-	// 	0b00100100,
-	// 	0b00000000,
-	// 	0b00000000,
-	// };
-
-	// //makes the outside of tiles 0-16 solid:
-	// // ppu.palette_table[0] = {
-	// // 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// // 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// // 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// // 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// // };
-
-	// //makes the center of tiles 0-16 solid:
-	// ppu.palette_table[1] = {
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// };
-
-	// //used for the player:
-	// ppu.palette_table[7] = {
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// 	glm::u8vec4(0xff, 0xff, 0x00, 0xff),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// };
-
-	// //used for the misc other sprites:
-	// ppu.palette_table[6] = {
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// 	glm::u8vec4(0x88, 0x88, 0xff, 0xff),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	// 	glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	// };
-
 	// Read in asset chunks
 	// Referenced documentation for istream https://cplusplus.com/reference/istream/istream/istream/
 	std::filebuf fb;
@@ -206,7 +113,7 @@ PlayMode::PlayMode() {
 	game_map = std::array<GridContents, grid_height*grid_width>();
 
 	// Initialize player position
-	player_pos = get_pos_vec(player_row, player_col);
+	player_pos = get_pos_vec(player_row, player_col, true);
 
 	// Initialize buttons
 	for (uint8_t i = 0; i < num_lights; i++) {
@@ -224,7 +131,7 @@ PlayMode::PlayMode() {
 		box_row = (rand() % grid_height - 1) + 1;
 		box_col = (rand() % grid_width - 1) + 1;
 	} while (game_map[get_index(box_row, box_col)] != CellEmpty);
-	box_pos = get_pos_vec(box_row, box_col);
+	box_pos = get_pos_vec(box_row, box_col, true);
 
 	// Start game on memorizing
 	gameState = MemorizeSequence;
@@ -287,7 +194,7 @@ void PlayMode::move_box(BoxAction boxAction) {
 	box_is_moving = true;
 	box_target_dist = 0;
 	box_travel_time = 0;
-	box_start = get_pos_vec(box_row, box_col);
+	box_start = get_pos_vec(box_row, box_col, true);
 
 	if (player_row < box_row) {
 		// Move up
@@ -313,25 +220,6 @@ void PlayMode::move_box(BoxAction boxAction) {
 	uint8_t new_col = box_col + box_travel_dir.x;
 	uint8_t new_row = box_row + box_travel_dir.y;
 	while (is_valid_pos(new_row, new_col)) {
-		// Check if there's anything on the ground
-		// uint current_index = get_index(new_row, new_col);
-		// if (game_map[current_index] != CellEmpty && gameState == RepeatSequence) {
-		// 	// Count button press
-		// 	LightColor hit_light = get_light_from_button(game_map[current_index]);
-		// 	if (lights_order[player_light_count] != hit_light) {
-		// 		failed_sequence = true;
-		// 		gameState = MemorizeSequence;
-		// 	} else {
-		// 		player_lights.push_back(hit_light);
-		// 		player_light_count++;
-
-		// 		if (player_light_count == light_sequence_count) {
-		// 			failed_sequence = false;
-		// 			gameState = MemorizeSequence;
-		// 		}
-		// 	}
-		// }
-
 		if (new_row == player_row && new_col == player_col) {
 			break;
 		}
@@ -361,7 +249,7 @@ void PlayMode::move_player(uint8_t new_row, uint8_t new_col) {
 
 	player_row = new_row;
 	player_col = new_col;
-	player_pos = get_pos_vec(player_row, player_col);
+	player_pos = get_pos_vec(player_row, player_col, true);
 }
 
 PlayMode::LightColor PlayMode::get_light_from_button(GridContents cell) {
@@ -375,8 +263,11 @@ PlayMode::LightColor PlayMode::get_light_from_button(GridContents cell) {
 	return LightOff;
 }
 
-glm::u8vec2 PlayMode::get_pos_vec(uint8_t row, uint8_t col) {
-	return glm::u8vec2((grid_start_x + col) * grid_tile_size, (grid_start_y + row) * grid_tile_size);
+glm::u8vec2 PlayMode::get_pos_vec(uint8_t row, uint8_t col, bool use_grid_start) {
+	if (use_grid_start) {
+		return glm::u8vec2((grid_start_x + col) * grid_tile_size, (grid_start_y + row) * grid_tile_size);
+	}
+	return glm::u8vec2(col * grid_tile_size, row * grid_tile_size);
 }
 
 uint PlayMode::get_index(uint8_t row, uint8_t col) {
@@ -409,6 +300,7 @@ void PlayMode::read_player_input() {
 void PlayMode::generate_light_sequence() {
 	player_lights = std::vector<LightColor>();
 	player_light_count = 0;
+	prev_player_light_count = 0;
 
 	// Generate lights order
 	if (!failed_sequence) {
@@ -457,6 +349,9 @@ void PlayMode::show_lights(float elapsed) {
 			current_light = failed_sequence ? AllLightsRed : AllLightsGreen;
 
 			if (showing_light_time >= light_break_time) {
+				if (lives == 0) {
+					end_game();
+				}
 				showing_light_time = 0;
 				light_state = LightShowBreak;
 			}
@@ -464,6 +359,14 @@ void PlayMode::show_lights(float elapsed) {
 		}
 		default: break;
 	}
+}
+
+void PlayMode::end_game() {
+	std::cout << "\n------------------------------\n";
+	std::cout << "Thanks for playing KaraSoko!\n";
+	std::cout << "Your score was: " << score << "\n";
+	std::cout << "------------------------------\n\n";
+	Mode::set_current(nullptr);	
 }
 
 void PlayMode::update(float elapsed) {
@@ -508,14 +411,15 @@ void PlayMode::update(float elapsed) {
 		}
 
 		// Check for button press
-		uint8_t box_row = (box_pos.y - grid_start_y) / grid_tile_size;
-		uint8_t box_col = (box_pos.x - grid_start_x) / grid_tile_size;
+		uint8_t box_row = box_pos.y / grid_tile_size - grid_start_y;
+		uint8_t box_col = box_pos.x / grid_tile_size - grid_start_x;
 		uint current_index = get_index(box_row, box_col);
 		if (current_index != box_last_hit_index && game_map[current_index] != CellEmpty && gameState == RepeatSequence) {
 			// Count button press
 			LightColor hit_light = get_light_from_button(game_map[current_index]);
 			if (lights_order[player_light_count] != hit_light) {
 				failed_sequence = true;
+				lives--;
 				gameState = MemorizeSequence;
 			} else {
 				player_lights.push_back(hit_light);
@@ -523,6 +427,7 @@ void PlayMode::update(float elapsed) {
 
 				if (player_light_count == light_sequence_count) {
 					failed_sequence = false;
+					score++;
 					gameState = MemorizeSequence;
 				}
 			}
@@ -550,16 +455,16 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		for (uint8_t c = 0; c < grid_width; c++) {
 			switch (game_map[get_index(r, c)]) {
 				case RedButton:
-					sprite_mapping["red_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					sprite_mapping["red_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c, true));
 					break;
 				case BlueButton:
-					sprite_mapping["blue_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					sprite_mapping["blue_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c, true));
 					break;
 				case YellowButton:
-					sprite_mapping["yellow_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					sprite_mapping["yellow_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c, true));
 					break;
 				case GreenButton:
-					sprite_mapping["green_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c));
+					sprite_mapping["green_light"].draw(&ppu, &sprite_index, get_pos_vec(r, c, true));
 					break;
 				default: break;
 			}
@@ -583,7 +488,12 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			light_sprite = sprite_mapping[lightSpriteOrder[i]];
 		}
 
-		light_sprite.draw(&ppu, &sprite_index, get_pos_vec(28, 2 + i * 3));
+		light_sprite.draw(&ppu, &sprite_index, get_pos_vec(29, 3 + i * 3, false));
+	}
+
+	// Draw lives
+	for (uint8_t i = 0; i < lives; i++) {
+		sprite_mapping["heart"].draw(&ppu, &sprite_index, get_pos_vec(0, i, false));
 	}
 
 	//--- actually draw ---

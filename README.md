@@ -30,7 +30,9 @@ Compile and run the game by running in the `15-466-game1` directory:
 % jam && dist/KaraSoko
 ```
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+The lights at the top of the screen will flash a predetermined sequence of colors. The player must move the box over the buttons on the floor in the order of the color flashes. A failed sequence will cost a life, and the player must achieve the highest score possible before losing all of their lives.
+
+The player can be controlled using the arrow keys (up, down, left, right). The box can be pushed by moving into the box, or pulled by pressing F while in the same row/column.
 
 **Sources:** None, all assets were created in https://www.pixilart.com/draw#
 
