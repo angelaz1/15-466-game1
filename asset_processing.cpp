@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <filesystem> // https://en.cppreference.com/w/cpp/filesystem
+#include <experimental/filesystem>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -159,7 +160,9 @@ int main(int argc, char **argv) {
     // Referenced sample code in documentation https://en.cppreference.com/w/cpp/filesystem/directory_iterator
     for (auto const& dir_entry : std::__fs::filesystem::directory_iterator{ data_path("") }) {
 #else
-    for (auto const& dir_entry : std::filesystem::directory_iterator{ data_path("") }) {
+    // Referenced for a solution to not having filesystem 
+    // https://stackoverflow.com/questions/45867379/why-does-gcc-not-seem-to-have-the-filesystem-standard-library
+    for (auto const& dir_entry : std::experimental::filesystem::directory_iterator{ data_path("") }) {
 #endif
         if (dir_entry.path().extension() == ".png") {
             read_png(dir_entry.path(), 
