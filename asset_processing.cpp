@@ -151,16 +151,14 @@ int main(int argc, char **argv) {
     std::vector< PPU466::Tile > tile_table = std::vector< PPU466::Tile >();
     std::vector< PlayMode::LoadedSprite > sprite_table = std::vector< PlayMode::LoadedSprite >();
 
-    uint32_t palette_index = 0;
-    uint32_t tile_index = 0;
-    uint32_t sprite_index = 0;
+    [[maybe_unused]] uint32_t palette_index = 0;
+    [[maybe_unused]] uint32_t tile_index = 0;
+    [[maybe_unused]] uint32_t sprite_index = 0;
+
 
     // Referenced sample code in documentation https://en.cppreference.com/w/cpp/filesystem/directory_iterator
 #ifdef __MACOSX__
     for (auto const& dir_entry : std::__fs::filesystem::directory_iterator{ data_path("") }) {
-#elif
-    for (auto const& dir_entry : std::filesystem::directory_iterator{ data_path("") }) {
-#endif
         if (dir_entry.path().extension() == ".png") {
             read_png(dir_entry.path(), 
                      &palette_table, &palette_index, &palette_color_count,
@@ -168,8 +166,16 @@ int main(int argc, char **argv) {
                      &sprite_table, &sprite_index);
         }
     }
-
-    (void)palette_index; (void)tile_index; (void)sprite_index;
+#else
+    for (auto const& dir_entry : std::filesystem::directory_iterator{ data_path("") }) {
+        if (dir_entry.path().extension() == ".png") {
+            read_png(dir_entry.path(), 
+                     &palette_table, &palette_index, &palette_color_count,
+                     &tile_table, &tile_index, 
+                     &sprite_table, &sprite_index);
+        }
+    }
+#endif
 
     // Referenced documentation for ostream constructor https://cplusplus.com/reference/ostream/ostream/ostream/
     std::filebuf fb;
