@@ -155,8 +155,12 @@ int main(int argc, char **argv) {
     uint32_t tile_index = 0;
     uint32_t sprite_index = 0;
 
+#ifdef __MACOSX__
     // Referenced sample code in documentation https://en.cppreference.com/w/cpp/filesystem/directory_iterator
     for (auto const& dir_entry : std::__fs::filesystem::directory_iterator{ data_path("") }) {
+#else
+    for (auto const& dir_entry : std::filesystem::directory_iterator{ data_path("") }) {
+#endif
         if (dir_entry.path().extension() == ".png") {
             read_png(dir_entry.path(), 
                      &palette_table, &palette_index, &palette_color_count,
