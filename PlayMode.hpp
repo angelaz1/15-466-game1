@@ -86,7 +86,7 @@ private:
 	glm::u8vec2 box_travel_dir = glm::u8vec2();
 	uint8_t box_target_dist = 0;
 	const uint8_t box_travel_speed = 200;
-	int box_last_hit_index = -1;
+	int box_last_index = -1;
 
 	// Memory game aspects
 	// Managing the lights that are displayed
@@ -130,7 +130,8 @@ private:
 	GameState gameState;
 
 	// Lives + Score
-	uint8_t lives = 3;
+	const uint8_t max_lives = 3;
+	uint8_t lives = max_lives;
 	uint score = 0;
 
 	// A dictionary containing mappings from sprite name -> loaded sprite
@@ -142,6 +143,9 @@ private:
 	enum BoxAction {
 		PushBox, PullBox
 	};
+
+	// Randomize the button positions in the level
+	void randomize_buttons();
 
 	// Moves the box based on the given action, current player and box positions
 	void move_box(BoxAction action);

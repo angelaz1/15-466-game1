@@ -116,15 +116,7 @@ PlayMode::PlayMode() {
 	player_pos = get_pos_vec(player_row, player_col, true);
 
 	// Initialize buttons
-	for (uint8_t i = 0; i < num_lights; i++) {
-		uint8_t button_row, button_col;
-		do {
-			button_row = (rand() % grid_height - 1) + 1;
-			button_col = (rand() % grid_width - 1) + 1;
-		} while (game_map[get_index(button_row, button_col)] != CellEmpty);
-
-		game_map[get_index(button_row, button_col)] = GridContents(i + 1);
-	}
+	randomize_buttons();
 	
 	// Initialize box position
 	do {
@@ -184,6 +176,22 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	}
 
 	return false;
+}
+
+void PlayMode::randomize_buttons() {
+	for (uint i = 0; i < grid_width * grid_height; i++) {
+		game_map[i] = CellEmpty;
+	}
+
+	for (uint8_t i = 0; i < num_lights; i++) {
+		uint8_t button_row, button_col;
+		do {
+			button_row = (rand() % grid_height - 1) + 1;
+			button_col = (rand() % grid_width - 1) + 1;
+		} while (game_map[get_index(button_row, button_col)] != CellEmpty);
+
+		game_map[get_index(button_row, button_col)] = GridContents(i + 1);
+	}
 }
 
 void PlayMode::move_box(BoxAction boxAction) {
@@ -304,6 +312,7 @@ void PlayMode::generate_light_sequence() {
 
 	// Generate lights order
 	if (!failed_sequence) {
+		randomize_buttons();
 		light_sequence_count = std::min(++light_sequence_count, max_light_sequence_count);
 		lights_order = std::vector<LightColor>();
 		for (uint8_t i = 0; i < light_sequence_count; i++) {
@@ -404,7 +413,6 @@ void PlayMode::update(float elapsed) {
 		if (travel_dist >= box_target_dist) {
 			box_pos = box_start + box_target_dist * box_travel_dir;
 			box_is_moving = false;
-			box_last_hit_index = -1;
 		}
 		else {
 			box_pos = box_start + travel_dist * box_travel_dir;
@@ -414,7 +422,7 @@ void PlayMode::update(float elapsed) {
 		uint8_t box_row = box_pos.y / grid_tile_size - grid_start_y;
 		uint8_t box_col = box_pos.x / grid_tile_size - grid_start_x;
 		uint current_index = get_index(box_row, box_col);
-		if (current_index != box_last_hit_index && game_map[current_index] != CellEmpty && gameState == RepeatSequence) {
+		if (current_index != box_last_index && game_map[current_index] != CellEmpty && gameState == RepeatSequence) {
 			// Count button press
 			LightColor hit_light = get_light_from_button(game_map[current_index]);
 			if (lights_order[player_light_count] != hit_light) {
@@ -432,8 +440,8 @@ void PlayMode::update(float elapsed) {
 				}
 			}
 
-			box_last_hit_index = current_index;
 		}
+		box_last_index = current_index;
 	}
 }
 
@@ -494,6 +502,9 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	// Draw lives
 	for (uint8_t i = 0; i < lives; i++) {
 		sprite_mapping["heart"].draw(&ppu, &sprite_index, get_pos_vec(0, i, false));
+	}
+	for (uint8_t i = lives; i < max_lives; i++) {
+		sprite_mapping["heart"].draw(&ppu, &sprite_index, get_pos_vec(31, 31, false)); // Off-screen
 	}
 
 	//--- actually draw ---
