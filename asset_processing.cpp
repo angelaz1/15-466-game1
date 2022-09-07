@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <filesystem> // https://en.cppreference.com/w/cpp/filesystem
-#include <experimental/filesystem>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -156,13 +155,11 @@ int main(int argc, char **argv) {
     uint32_t tile_index = 0;
     uint32_t sprite_index = 0;
 
-#ifdef __MACOSX__
     // Referenced sample code in documentation https://en.cppreference.com/w/cpp/filesystem/directory_iterator
+#ifdef __MACOSX__
     for (auto const& dir_entry : std::__fs::filesystem::directory_iterator{ data_path("") }) {
-#else
-    // Referenced for a solution to not having filesystem 
-    // https://stackoverflow.com/questions/45867379/why-does-gcc-not-seem-to-have-the-filesystem-standard-library
-    for (auto const& dir_entry : std::experimental::filesystem::directory_iterator{ data_path("") }) {
+#elif
+    for (auto const& dir_entry : std::filesystem::directory_iterator{ data_path("") }) {
 #endif
         if (dir_entry.path().extension() == ".png") {
             read_png(dir_entry.path(), 
