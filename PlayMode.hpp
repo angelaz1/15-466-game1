@@ -86,7 +86,7 @@ private:
 	glm::u8vec2 box_travel_dir = glm::u8vec2();
 	uint8_t box_target_dist = 0;
 	const uint8_t box_travel_speed = 200;
-	int box_last_index = -1;
+	uint box_last_index = 0;
 
 	// Memory game aspects
 	// Managing the lights that are displayed

@@ -7,6 +7,7 @@
 #include "read_write_chunk.hpp"
 #include "PlayMode.hpp"
 
+#include <algorithm>
 #include <filesystem> // https://en.cppreference.com/w/cpp/filesystem
 #include <fstream>
 #include <iostream>
@@ -163,6 +164,8 @@ int main(int argc, char **argv) {
                      &sprite_table, &sprite_index);
         }
     }
+
+    (void)palette_index; (void)tile_index; (void)sprite_index;
 
     // Referenced documentation for ostream constructor https://cplusplus.com/reference/ostream/ostream/ostream/
     std::filebuf fb;

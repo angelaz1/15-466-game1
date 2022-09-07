@@ -313,7 +313,8 @@ void PlayMode::generate_light_sequence() {
 	// Generate lights order
 	if (!failed_sequence) {
 		randomize_buttons();
-		light_sequence_count = std::min(++light_sequence_count, max_light_sequence_count);
+		light_sequence_count++;
+		light_sequence_count = std::min(light_sequence_count, max_light_sequence_count);
 		lights_order = std::vector<LightColor>();
 		for (uint8_t i = 0; i < light_sequence_count; i++) {
 			lights_order.push_back(LightColor((rand() % num_lights)));
